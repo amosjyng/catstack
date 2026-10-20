@@ -200,6 +200,7 @@ BREVITY_HOOK_NAME = "diu-stop"
 _STOP_HOOK_BLOCK_PREFIX = "Stop hook feedback"
 _STOP_HOOK_SCRIPT_RE = re.compile(r"([A-Za-z0-9_-]+)/[a-z0-9_]+\.py")
 _CLAUDE_COMMAND_NAME_RE = re.compile(r"<command-name>\s*(?P<name>[^<]+?)\s*</command-name>", re.DOTALL)
+_TRAILING_DIU_RE = re.compile(r"(?:^|\s)/diu\s*[.!]?\s*$")
 
 # function_call_output / custom_tool_call_output payloads carry their exit
 # status as prose ("Process exited with code 1" for exec_command,
@@ -330,6 +331,13 @@ def _claude_queued_human_prompt(row):
     return prompt if isinstance(prompt, str) else None
 
 
+def _claude_system_injected(text):
+    stripped = text.lstrip()
+    if stripped.startswith("<command-") and _CLAUDE_COMMAND_NAME_RE.search(stripped):
+        return False
+    return stripped.startswith(transcript_provenance.CLAUDE_SYSTEM_PREFIXES)
+
+
 def _claude_human_texts(path, rows):
     if "/subagents/" in path.replace("\\", "/"):
         return
@@ -344,7 +352,7 @@ def _claude_human_texts(path, rows):
     for index, row in enumerate(rows):
         queued = _claude_queued_human_prompt(row)
         if queued is not None:
-            if last_user_index_by_text.get(queued.strip(), -1) <= index:
+            if last_user_index_by_text.get(queued.strip(), -1) <= index and not _claude_system_injected(queued):
                 yield queued
             continue
         if row.get("type") != "user" or row.get("agentId") or row.get("isSidechain"):
@@ -355,7 +363,7 @@ def _claude_human_texts(path, rows):
         text = transcript_provenance._text_from_content(message.get("content"))
         if row.get("isMeta") or text.lstrip().startswith(_STOP_HOOK_BLOCK_PREFIX):
             continue
-        if text.lstrip().startswith(transcript_provenance.CLAUDE_AUTONOMOUS_DISPATCH_PREFIXES):
+        if _claude_system_injected(text):
             continue
         yield text
 
@@ -550,7 +558,7 @@ def _claude_brevity_follow_ups(path, rows):
     diu_commands = eli5_only = 0
     for text in _claude_human_texts(path, rows):
         names = set(_claude_command_names(text))
-        if names & BREVITY_COMMAND_NAMES:
+        if names & BREVITY_COMMAND_NAMES or (not names and _TRAILING_DIU_RE.search(text)):
             diu_commands += 1
         elif not names and _is_brevity_trigger_text(text):
             eli5_only += 1
