@@ -21,7 +21,7 @@ MAX_LINE = 320
 FOLD_LINES = 400
 SKIP_SUBJECT = ("invoker: ", "Merge ")
 META_FIELDS = (("Summary", "summary"), ("Justification", "justification"), ("Review claim", "claim"), ("Review lane", "lane"),
-               ("Safety invariant", "safety"), ("Slice rationale", "rationale"), ("Architectural effect", "effect"),
+               ("Safety invariant (proposed)", "safety"), ("Slice rationale", "rationale"), ("Architectural effect", "effect"),
                ("Alternative considerations", "alternatives"), ("Non-goals", "non_goals"), ("Technique", "technique"),
                ("Test plan", "test_plan"), ("Revert plan", "revert_plan"))
 
