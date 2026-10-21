@@ -76,6 +76,18 @@ class BuildReviewStack(unittest.TestCase):
         self.assertIn("old.py", first)
         self.assertNotIn("old.py", git(self.repo, "ls-tree", "-r", "--name-only", "review/2-retire").split())
 
+    def test_the_temporary_checkout_keeps_the_repository_folder_name(self):
+        """A package imports by its folder name, so a slice's tests must run in a checkout named like the repository, not a random temp name."""
+        Path(self.repo, "tests", "test_where.py").write_text(
+            "import os\nimport unittest\n\nclass T(unittest.TestCase):\n    def test_folder(self):\n        self.assertEqual(os.path.basename(os.getcwd()), 'repo')\n")
+        git(self.repo, "add", "-A")
+        git(self.repo, "commit", "-q", "-m", "a test that asserts the folder name")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = build_review_stack.main(self.repo, "main", "end", "review", self.slices(["README.md"]))
+        self.assertEqual(rc, 0, out.getvalue())
+        self.assertIn("slices whose own tests failed: 0", out.getvalue())
+
     def test_fails_when_a_changed_path_is_claimed_by_no_slice(self):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):

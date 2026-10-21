@@ -11,6 +11,7 @@ with unittest on that slice and the result is printed next to it.
 """
 import fnmatch
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -44,7 +45,8 @@ def main(repo, base, end, prefix, slices_path):
     end_paths = set(git(repo, "ls-tree", "-r", "--name-only", end).splitlines())
     touched = {parts[1]: parts[0][0] for parts in changed}
     claimed = {}
-    tmp = tempfile.mkdtemp(prefix="review-stack-")
+    tmp_parent = tempfile.mkdtemp(prefix="review-stack-")
+    tmp = os.path.join(tmp_parent, os.path.basename(os.path.abspath(repo)))  # a package imports by its folder name, so the checkout keeps the repository's
     git(repo, "worktree", "add", "-q", "--detach", tmp, base)
     failed_tests = 0
     try:
@@ -85,6 +87,7 @@ def main(repo, base, end, prefix, slices_path):
         return 0
     finally:
         git(repo, "worktree", "remove", "--force", tmp)
+        os.rmdir(tmp_parent)
 
 
 if __name__ == "__main__":
