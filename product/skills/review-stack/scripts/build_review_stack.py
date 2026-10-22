@@ -46,7 +46,7 @@ def main(repo, base, end, prefix, slices_path):
     touched = {parts[1]: parts[0][0] for parts in changed}
     claimed = {}
     tmp_parent = tempfile.mkdtemp(prefix="review-stack-")
-    tmp = os.path.join(tmp_parent, os.path.basename(os.path.abspath(repo)))  # a package imports by its folder name, so the checkout keeps the repository's
+    tmp = os.path.join(tmp_parent, os.path.basename(os.path.abspath(repo)))
     git(repo, "worktree", "add", "-q", "--detach", tmp, base)
     failed_tests = 0
     try:
